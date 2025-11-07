@@ -1,0 +1,27 @@
+{
+  "audit": {
+    "issues_detected": [
+      "after_commit accessed session._changes without checks",
+      "_changes persisted between transactions",
+      "_changes attached to shared db.session (not thread-safe)",
+      "index updates were not atomic",
+      "tests did not cover malformed or stale _changes",
+      "events bound to db.session instead of Session-level listeners"
+    ],
+    "fixes_applied": [
+      "Use session.info['searchable_changes'] for per-session storage",
+      "Reinitialize searchable_changes at before_commit",
+      "Defensive checks in after_commit to validate structure",
+      "Use event.listens_for(Session, ...) for reliable event binding",
+      "Apply a threading lock around index updates to simulate atomicity",
+      "Extended tests to cover concurrency and malformed session.info"
+    ]
+  },
+  "tests": {
+    "total": 3,
+    "passed": 3,
+    "failed": 0,
+    "warnings": 2,
+    "details": "All tests passed locally: test_concurrent_updates, test_missing_or_stale_changes, test_residual_state_is_cleared_between_transactions"
+  }
+}
