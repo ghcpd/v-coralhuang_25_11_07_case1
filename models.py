@@ -1,29 +1,47 @@
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
 import threading
+from sqlalchemy.orm import Session
+from sqlalchemy import event
 
 db = SQLAlchemy()
 INDEX = []
-index_lock = threading.Lock()
+# Thread-safe lock for atomic index operations
+INDEX_LOCK = threading.RLock()
+
 
 def add_to_index(index_name, obj):
-    """Thread-safe index update with atomic lock"""
-    with index_lock:
+    """Atomic index update using lock to ensure thread safety."""
+    with INDEX_LOCK:
         INDEX.append((index_name, obj.id, obj.body))
 
+
 class SearchableMixin(object):
+    """
+    Fixed SearchableMixin that addresses all six defects:
+    1. Defensive checks for _changes existence and type
+    2. Proper cleanup and isolation of _changes per transaction
+    3. Uses session.info (thread-safe) instead of shared db.session attributes
+    4. Atomic index updates via lock mechanism
+    5. Session-level event binding instead of db.session global binding
+    6. Proper SQLAlchemy SessionEvents pattern
+    """
+
     @classmethod
     def before_commit(cls, session):
         """
-        Fix 3 & 4: Use session.info (session-local, not shared globally)
-        Fix 2: Reinitialize _changes at the start of each transaction
-        Fix 1: Initialize with proper type checking (dict)
+        Prepare transaction changes for indexing.
+        Uses session.info to store changes in session-local storage (thread-safe).
+        Clears any residual state at start of each transaction.
         """
-        # Initialize session.info if not present (session-safe storage)
+        # Initialize/clear session-local storage at start of transaction
         if 'searchable_changes' not in session.info:
             session.info['searchable_changes'] = {}
-        
-        # Reinitialize _changes at start of transaction (Fix 2)
+        else:
+            # Clear residual state from previous transaction
+            session.info['searchable_changes'] = {}
+
+        # Store current transaction changes in session.info (thread-safe, transaction-scoped)
         session.info['searchable_changes'] = {
             'add': [obj for obj in session.new if isinstance(obj, cls)],
             'update': [obj for obj in session.dirty if isinstance(obj, cls)],
@@ -33,37 +51,43 @@ class SearchableMixin(object):
     @classmethod
     def after_commit(cls, session):
         """
-        Fix 1: Defensive check for existence and type of _changes
-        Fix 5: Atomic index updates via lock
-        Fix 2: Cleanup after commit
+        Process index updates after successful commit.
+        Defensively checks for _changes existence and type.
+        Cleans up after processing to prevent stale data accumulation.
         """
-        # Fix 1: Defensive check for existence and type
+        # Defensive check: ensure searchable_changes exists and is dict
         if 'searchable_changes' not in session.info:
             return
         
         changes = session.info.get('searchable_changes')
         if not isinstance(changes, dict):
             return
-        
-        # Fix 5: Atomic index updates
-        with index_lock:
-            for obj in changes.get('add', []):
-                add_to_index(cls.__tablename__, obj)
-            for obj in changes.get('update', []):
-                add_to_index(cls.__tablename__, obj)
-            for obj in changes.get('delete', []):
+
+        # Defensively check each key exists before iteration
+        if 'add' in changes:
+            for obj in changes['add']:
                 add_to_index(cls.__tablename__, obj)
         
-        # Fix 2: Cleanup after commit
-        session.info['searchable_changes'] = None
+        if 'update' in changes:
+            for obj in changes['update']:
+                add_to_index(cls.__tablename__, obj)
+        
+        if 'delete' in changes:
+            for obj in changes['delete']:
+                add_to_index(cls.__tablename__, obj)
+
+        # Clean up after commit to prevent stale data
+        session.info['searchable_changes'] = {}
 
     @classmethod
     def after_rollback(cls, session):
         """
-        Handle rollback scenario: clear stale _changes
+        Clean up after rollback to ensure state isolation.
+        Prevents rollback changes from affecting next transaction.
         """
         if 'searchable_changes' in session.info:
-            session.info['searchable_changes'] = None
+            session.info['searchable_changes'] = {}
+
 
 class Post(SearchableMixin, db.Model):
     __tablename__ = 'post'
@@ -71,22 +95,10 @@ class Post(SearchableMixin, db.Model):
     body = db.Column(db.String(140))
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
 
-# Fix 6: Use SQLAlchemy's recommended event.listens_for pattern
-# This applies to all Session instances, not just db.session
-from sqlalchemy.orm import Session
-from sqlalchemy import event
 
-@event.listens_for(Session, 'before_commit')
-def receive_before_commit(session):
-    """Register before_commit at Session level"""
-    Post.before_commit(session)
-
-@event.listens_for(Session, 'after_commit')
-def receive_after_commit(session):
-    """Register after_commit at Session level"""
-    Post.after_commit(session)
-
-@event.listens_for(Session, 'after_rollback')
-def receive_after_rollback(session):
-    """Handle rollback to clear stale data"""
-    Post.after_rollback(session)
+# Session-level event binding (fixed Problem 6)
+# This uses SQLAlchemy's recommended event binding pattern for Session class
+# instead of binding to global db.session instance
+event.listens_for(Session, 'before_commit')(Post.before_commit)
+event.listens_for(Session, 'after_commit')(Post.after_commit)
+event.listens_for(Session, 'after_rollback')(Post.after_rollback)
