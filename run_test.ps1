@@ -1,0 +1,1 @@
+python -m venv .venv; . .venv/Scripts/Activate.ps1; python -m pip install -r requirements.txt; python -m pytest -q test_concurrency.py | Tee-Object raw_results.txt; $json = @{ 'result' = Get-Content raw_results.txt -Raw }; $json | ConvertTo-Json | Out-File output.json -Encoding utf8; Write-Host "Wrote output.json";
