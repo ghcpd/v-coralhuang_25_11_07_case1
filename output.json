@@ -1,0 +1,45 @@
+{
+	"detected_issues": [
+		"after_commit did not check for the existence or type of session._changes",
+		"_changes was not cleared between transactions, leaving stale data",
+		"_changes was attached directly to global db.session (not session-safe)",
+		"Index updates lacked atomicity leading to race conditions",
+		"Event handlers were bound to a global session instead of Session-level events",
+		"Test suite lacked coverage for malformed/missing _changes and rollback scenarios"
+	],
+	"modifications": [
+		"Use session.info per-class keys for per-transaction change storage",
+		"Add defensive checks and normalization for change data structure",
+		"Clear per-session change buffers after commit and after rollback",
+		"Bind events to sqlalchemy.orm.Session using event.listens_for",
+		"Use a threading.Lock (INDEX_LOCK) to make index updates atomic",
+		"Refactor tests to cover concurrent commits, malformed _changes, rollback, and isolation"
+	],
+	"test_run": {
+		"attempted": true,
+		"status": "failed",
+		"reason": "Test execution in this automated environment failed due to missing imports",
+		"errors": [
+			{
+				"step": "import models (first attempt)",
+				"error": "ModuleNotFoundError: No module named 'flask_sqlalchemy'",
+				"note": "Observed when running test_runner via the environment's Python interpreter."
+			},
+			{
+				"step": "import models (after modifications)",
+				"error": "ModuleNotFoundError: No module named 'sqlalchemy'",
+				"note": "Subsequent attempts also reported missing SQLAlchemy in the interpreter used by the run tool."
+			}
+		],
+		"raw_tool_output": "Multiple ModuleNotFoundError exceptions were raised when attempting to import dependencies (flask_sqlalchemy and sqlalchemy) from the Python interpreter used by the automated runner. See console logs for full tracebacks."
+	},
+	"how_to_run_locally": {
+		"notes": "Run these commands in PowerShell on your machine to reproduce tests locally (creates a venv and runs pytest with JSON report).",
+		"commands": [
+			"python -m venv .venv",
+			".\\.venv\\Scripts\\pip.exe install --upgrade pip",
+			".\\.venv\\Scripts\\pip.exe install -r requirements.txt",
+			".\\.venv\\Scripts\\pytest.exe -q --json-report --json-report-file=raw_results.json"
+		]
+	}
+}
