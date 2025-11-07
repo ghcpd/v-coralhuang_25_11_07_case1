@@ -1,0 +1,148 @@
+{
+  "summary": {
+    "passed": 4,
+    "failed": 0,
+    "skipped": 0,
+    "duration": 0.7581164836883545
+  },
+  "raw": {
+    "created": 1762494609.271481,
+    "duration": 0.7581164836883545,
+    "exitcode": 0,
+    "root": "C:\\Bug_Bash\\25_11_07\\v-coralhuang_25_11_07_case1",
+    "environment": {},
+    "summary": {
+      "passed": 4,
+      "total": 4,
+      "collected": 4
+    },
+    "collectors": [
+      {
+        "nodeid": "",
+        "outcome": "passed",
+        "result": [
+          {
+            "nodeid": "test_concurrency.py",
+            "type": "Module"
+          }
+        ]
+      },
+      {
+        "nodeid": "test_concurrency.py",
+        "outcome": "passed",
+        "result": [
+          {
+            "nodeid": "test_concurrency.py::test_concurrent_updates",
+            "type": "Function",
+            "lineno": 45
+          },
+          {
+            "nodeid": "test_concurrency.py::test_missing_leftover_changes_cleanup",
+            "type": "Function",
+            "lineno": 61
+          },
+          {
+            "nodeid": "test_concurrency.py::test_rollback_clears_state",
+            "type": "Function",
+            "lineno": 74
+          },
+          {
+            "nodeid": "test_concurrency.py::test_atomic_index_updates_ordering",
+            "type": "Function",
+            "lineno": 95
+          }
+        ]
+      }
+    ],
+    "tests": [
+      {
+        "nodeid": "test_concurrency.py::test_concurrent_updates",
+        "lineno": 45,
+        "outcome": "passed",
+        "keywords": [
+          "test_concurrent_updates",
+          "test_concurrency.py",
+          "v-coralhuang_25_11_07_case1"
+        ],
+        "setup": {
+          "duration": 0.010331900033634156,
+          "outcome": "passed"
+        },
+        "call": {
+          "duration": 0.03804139996645972,
+          "outcome": "passed"
+        },
+        "teardown": {
+          "duration": 0.00025019998429343104,
+          "outcome": "passed"
+        }
+      },
+      {
+        "nodeid": "test_concurrency.py::test_missing_leftover_changes_cleanup",
+        "lineno": 61,
+        "outcome": "passed",
+        "keywords": [
+          "test_missing_leftover_changes_cleanup",
+          "test_concurrency.py",
+          "v-coralhuang_25_11_07_case1"
+        ],
+        "setup": {
+          "duration": 0.00021710002329200506,
+          "outcome": "passed"
+        },
+        "call": {
+          "duration": 0.0053548000287264585,
+          "outcome": "passed"
+        },
+        "teardown": {
+          "duration": 0.00019099999917671084,
+          "outcome": "passed"
+        }
+      },
+      {
+        "nodeid": "test_concurrency.py::test_rollback_clears_state",
+        "lineno": 74,
+        "outcome": "passed",
+        "keywords": [
+          "test_rollback_clears_state",
+          "test_concurrency.py",
+          "v-coralhuang_25_11_07_case1"
+        ],
+        "setup": {
+          "duration": 0.00025400001322850585,
+          "outcome": "passed"
+        },
+        "call": {
+          "duration": 0.005734700011089444,
+          "outcome": "passed"
+        },
+        "teardown": {
+          "duration": 0.0002726000384427607,
+          "outcome": "passed"
+        }
+      },
+      {
+        "nodeid": "test_concurrency.py::test_atomic_index_updates_ordering",
+        "lineno": 95,
+        "outcome": "passed",
+        "keywords": [
+          "test_atomic_index_updates_ordering",
+          "test_concurrency.py",
+          "v-coralhuang_25_11_07_case1"
+        ],
+        "setup": {
+          "duration": 0.00025159999495372176,
+          "outcome": "passed"
+        },
+        "call": {
+          "duration": 0.07578620000276715,
+          "outcome": "passed"
+        },
+        "teardown": {
+          "duration": 0.004464199999347329,
+          "outcome": "passed"
+        }
+      }
+    ]
+  }
+}
