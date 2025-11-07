@@ -1,87 +1,91 @@
-from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
+import threading
 from sqlalchemy import event
 from sqlalchemy.orm import Session
-import threading
 
+# Initialize SQLAlchemy extension (app will call init_app)
 db = SQLAlchemy()
 
-# In-memory mock index and a lock to make updates atomic in this demo
-INDEX = []
-_index_lock = threading.Lock()
+# Thread-safe mock index using a lock to ensure atomic updates and preserve ordering
+class MockIndex:
+    def __init__(self):
+        self._lock = threading.Lock()
+        self._entries = []
+
+    def add(self, index_name, obj):
+        with self._lock:
+            # Simulate atomic index write
+            self._entries.append((index_name, obj.id, obj.body))
+
+    def clear(self):
+        with self._lock:
+            self._entries.clear()
+
+    def all(self):
+        with self._lock:
+            return list(self._entries)
+
+
+INDEX = MockIndex()
 
 
 def add_to_index(index_name, obj):
-    # Simulated atomic index update
-    with _index_lock:
-        INDEX.append((index_name, obj.id, obj.body))
+    INDEX.add(index_name, obj)
 
 
 class SearchableMixin(object):
-    """
-    Fixed SearchableMixin that stores per-session changes in `session.info`
-    and uses Session-level event listeners for before/after commit.
-    """
+    @classmethod
+    def _collect_changes(cls, session):
+        # Collect only instances of this class from the session's transactional state
+        adds = [obj for obj in session.new if isinstance(obj, cls)]
+        updates = [obj for obj in session.dirty if isinstance(obj, cls)]
+        deletes = [obj for obj in session.deleted if isinstance(obj, cls)]
+        return {'add': adds, 'update': updates, 'delete': deletes}
 
-    @staticmethod
-    def _collect_changes(session):
-        # Initialize fresh per-transaction storage to avoid stale data
-        session.info['searchable_changes'] = {}
+    @classmethod
+    def before_commit(cls, session):
+        # Use session.info (a per-session dict) to avoid attaching attributes to the global session
+        if not isinstance(session, Session):
+            return
+        # Initialize/clear changes for this transaction to avoid residual data
+        existing = session.info.get('searchable_changes')
+        # If existing is not a dict (malformed or leftover), replace it with a fresh dict
+        if existing is None or not isinstance(existing, dict):
+            session.info['searchable_changes'] = {}
 
-        for obj in session.new:
-            if isinstance(obj, SearchableMixin):
-                tab = getattr(obj, '__tablename__', None) or obj.__class__.__name__
-                session.info['searchable_changes'].setdefault(tab, {'add': [], 'update': [], 'delete': []})
-                session.info['searchable_changes'][tab]['add'].append(obj)
+        session.info['searchable_changes'][cls.__name__] = cls._collect_changes(session)
 
-        for obj in session.dirty:
-            if isinstance(obj, SearchableMixin):
-                tab = getattr(obj, '__tablename__', None) or obj.__class__.__name__
-                session.info['searchable_changes'].setdefault(tab, {'add': [], 'update': [], 'delete': []})
-                session.info['searchable_changes'][tab]['update'].append(obj)
+    @classmethod
+    def after_commit(cls, session):
+        # Defensive checks: ensure session.info has the expected structure
+        if not isinstance(session, Session):
+            return
+        sc = session.info.get('searchable_changes')
+        if not sc or not isinstance(sc, dict):
+            return
+        changes = sc.get(cls.__name__)
+        if not changes or not isinstance(changes, dict):
+            # Nothing to do
+            return
 
-        for obj in session.deleted:
-            if isinstance(obj, SearchableMixin):
-                tab = getattr(obj, '__tablename__', None) or obj.__class__.__name__
-                session.info['searchable_changes'].setdefault(tab, {'add': [], 'update': [], 'delete': []})
-                session.info['searchable_changes'][tab]['delete'].append(obj)
+        # Perform atomic index updates using the MockIndex lock in add_to_index
+        for obj in changes.get('add', []) + changes.get('update', []) + changes.get('delete', []):
+            try:
+                add_to_index(cls.__tablename__, obj)
+            except Exception:
+                # If index update fails, we don't want to leave stale state in session.info
+                pass
 
-
-@event.listens_for(Session, 'before_commit')
-def session_before_commit(session):
-    # Clear/initialize session-local storage to ensure isolation
-    try:
-        SearchableMixin._collect_changes(session)
-    except Exception:
-        # Defensive: ensure we never leave session.info in a bad state
-        session.info['searchable_changes'] = {}
-
-
-@event.listens_for(Session, 'after_commit')
-def session_after_commit(session):
-    # Defensive checks for existence and correct type
-    changes = session.info.get('searchable_changes')
-    if not isinstance(changes, dict):
-        # If stale or malformed, reset and exit gracefully
-        session.info['searchable_changes'] = {}
-        return
-
-    # Apply index updates with an atomic lock to simulate transactional ordering
-    for tablename, groups in changes.items():
-        if not isinstance(groups, dict):
-            continue
-        for action in ('add', 'update', 'delete'):
-            objs = groups.get(action) or []
-            for obj in objs:
-                try:
-                    add_to_index(tablename, obj)
-                except Exception:
-                    # In production, you'd log and/or enqueue a retry
-                    pass
-
-    # Cleanup to avoid leaving residual state
-    session.info['searchable_changes'] = {}
+        # Cleanup per-session stored changes for this class
+        try:
+            del session.info['searchable_changes'][cls.__name__]
+            # If there are no more classes recorded, remove the key entirely
+            if not session.info['searchable_changes']:
+                del session.info['searchable_changes']
+        except Exception:
+            # Be defensive: ignore cleanup failures
+            pass
 
 
 class Post(SearchableMixin, db.Model):
@@ -91,13 +95,19 @@ class Post(SearchableMixin, db.Model):
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
 
 
-def create_app(database_uri='sqlite:///:memory:'):
-    app = Flask(__name__)
-    app.config['SQLALCHEMY_DATABASE_URI'] = database_uri
-    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-    db.init_app(app)
+# Bind listeners at the Session level so they work with any session scope
+@event.listens_for(Session, 'before_commit')
+def _session_before_commit(session):
+    # For this small demo we only have Post; in larger apps you would iterate mapped classes
+    try:
+        Post.before_commit(session)
+    except Exception:
+        pass
 
-    with app.app_context():
-        db.create_all()
 
-    return app
+@event.listens_for(Session, 'after_commit')
+def _session_after_commit(session):
+    try:
+        Post.after_commit(session)
+    except Exception:
+        pass

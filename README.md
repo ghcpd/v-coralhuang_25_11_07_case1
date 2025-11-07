@@ -1,33 +1,38 @@
-Project: flask_searchablemixin_buggy_version
+# SearchableMixin Concurrency Fixes
 
-Summary:
-This small demo reproduces and fixes several concurrency and safety problems
-in a SearchableMixin that integrates SQLAlchemy sessions with an external
-search index. The original implementation attached mutable state to the
-global `db.session`, did not clear residual state, and used instance-level
-event wiring. These led to race conditions and lost index updates.
+This project demonstrates fixes to a buggy `SearchableMixin` that integrated SQLAlchemy ORM events with a search index in an unsafe way.
 
-Fixes applied:
-- Use `session.info` (per-session storage) instead of attaching `_changes` to
-  the shared `db.session`.
-- Add defensive checks for missing/malformed `searchable_changes`.
-- Reinitialize per-transaction storage at `before_commit` to avoid residual
-  state.
-- Use SQLAlchemy `Session`-level event listeners via `event.listens_for`.
-- Use a threading lock to make index updates atomic in this demo.
-- Extended tests to cover concurrent commits, malformed session state, and
-  confirming residual state is cleared.
+## Original Defects
+- `after_commit` assumed `session._changes` existed and was a dict, causing AttributeError/TypeError.
+- `_changes` was left on the global session across transactions, producing stale data.
+- Shared mutable state was attached directly to `db.session`, not session-scoped or thread-safe.
+- Index updates were non-atomic and could be lost in concurrent commits.
+- Event registration used `db.event.listen(db.session, ...)` which binds to a single session instance.
 
-How to run tests (Windows PowerShell):
+## Fixes Implemented
+- Use `session.info` (a per-session dict) to store transactional changes safely.
+- Defensively check types and existence before accessing `searchable_changes`.
+- Reinitialize/clear per-transaction changes at `before_commit`.
+- Use a thread-safe `MockIndex` with a lock to simulate atomic index writes.
+- Register listeners at the SQLAlchemy `Session` level using `event.listens_for(Session, ...)`.
 
-1. Create a virtualenv and activate it
-   python -m venv .venv; .\.venv\Scripts\Activate.ps1
+## Files
+- `models.py`: corrected `SearchableMixin`, `Post` model, `MockIndex` implementation, and Session-level event listeners.
+- `test_concurrency.py`: expanded tests covering concurrent commits, malformed/leftover `searchable_changes`, and rollback scenarios.
+- `requirements.txt`: dependencies for reproduction.
+- `run_test.sh`: script to create venv, install deps, run tests, and produce `raw_results.json` and `output.json`.
 
-2. Install requirements
-   pip install -r requirements.txt
+## How to run
+On Unix-like systems:
 
-3. Run tests
-   pytest -q
+```bash
+./run_test.sh
+```
 
-Or use the provided `run_test.sh` which wraps these steps and writes
-`raw_results.json` and `output.json`.
+On Windows (PowerShell):
+
+```powershell
+python -m venv .venv; .\.venv\Scripts\Activate.ps1; pip install -r requirements.txt; pytest -q --tb=short --json-report --json-report-file=raw_results.json; python -c "import json; r=json.load(open('raw_results.json')); summary={'total':r.get('summary',{}).get('total',0),'passed':r.get('summary',{}).get('passed',0),'failed':r.get('summary',{}).get('failed',0)}; json.dump({'summary':summary,'raw':r}, open('output.json','w'), indent=2); print('Wrote output.json')"
+```
+
+Note: This environment uses SQLite in-memory DB for tests and a mock index; no external services required.

@@ -1,24 +1,28 @@
-#!/bin/bash
+#!/usr/bin/env bash
 set -euo pipefail
 
-WORKDIR=$(cd "$(dirname "$0")" && pwd)
-cd "$WORKDIR"
-
+# Create venv
 python -m venv .venv
-source .venv/bin/activate
+. .venv/bin/activate
+
+# Install dependencies
+pip install --upgrade pip
 pip install -r requirements.txt
 
-pytest -q --tb=short || true
+# Run pytest and capture raw results
+pytest -q --tb=short --json-report --json-report-file=raw_results.json
 
-# Minimal raw results capture
-pytest -q --maxfail=1 > raw_results.txt || true
-
+# Summarize results to output.json
 python - <<'PY'
 import json
-out = {
-  "project": "flask_searchablemixin_buggy_version",
-  "tests_raw": open('raw_results.txt','r',encoding='utf-8').read()
+with open('raw_results.json') as f:
+    r = json.load(f)
+summary = {
+    'total': r.get('summary', {}).get('total', 0),
+    'passed': r.get('summary', {}).get('passed', 0),
+    'failed': r.get('summary', {}).get('failed', 0),
 }
-open('output.json','w',encoding='utf-8').write(json.dumps(out, indent=2))
+with open('output.json','w') as o:
+    json.dump({'summary': summary, 'raw': r}, o, indent=2)
 print('Wrote output.json')
 PY
