@@ -1,0 +1,223 @@
+{
+  "detected_issues": [
+    "after_commit did not check for existence or type of session._changes",
+    "_changes was not cleared between transactions, leaving residual data",
+    "_changes attached to global db.session causing cross-thread pollution",
+    "Index updates lacked atomicity leading to lost updates",
+    "Event listeners bound to a specific session instance instead of Session class"
+  ],
+  "root_causes": [
+    "Shared mutable state stored on the global session instance instead of per-session storage",
+    "Lack of defensive checks and cleanup for transaction-bound state",
+    "No locking around the mock index leading to race conditions",
+    "Event binding to the wrong object led to inconsistent listener registration across sessions"
+  ],
+  "code_modifications": [
+    "Migrate per-transaction changes from session._changes to session.info[\"searchable_changes\"]",
+    "Defensive checks for dict type and safe access in after_commit",
+    "Always clear search changes in finally block after after_commit",
+    "Register event listeners using sqlalchemy.event.listen(Session, ...)",
+    "Add a threading.Lock-wrapped add_to_index to ensure atomic index updates",
+    "Update tests to use app fixture, push app context in threads, and cover rollback, leftover, and concurrency cases"
+  ],
+  "pytest_summary": {
+    "total": 4,
+    "passed": 4,
+    "failed": 0,
+    "skipped": 0,
+    "duration": 0.8055703639984131
+  },
+  "raw_report": {
+    "created": 1762493520.8316662,
+    "duration": 0.8055703639984131,
+    "exitcode": 0,
+    "root": "C:\\Bug_Bash\\25_11_07\\v-coralhuang_25_11_07_case1",
+    "environment": {},
+    "summary": {
+      "passed": 4,
+      "total": 4,
+      "collected": 4
+    },
+    "collectors": [
+      {
+        "nodeid": "",
+        "outcome": "passed",
+        "result": [
+          {
+            "nodeid": ".",
+            "type": "Dir"
+          }
+        ]
+      },
+      {
+        "nodeid": "instance",
+        "outcome": "passed",
+        "result": []
+      },
+      {
+        "nodeid": "test_concurrency.py",
+        "outcome": "passed",
+        "result": [
+          {
+            "nodeid": "test_concurrency.py::test_concurrent_updates",
+            "type": "Function",
+            "lineno": 51
+          },
+          {
+            "nodeid": "test_concurrency.py::test_rollback_and_cleanup",
+            "type": "Function",
+            "lineno": 70
+          },
+          {
+            "nodeid": "test_concurrency.py::test_leftover_changes_cleared_and_defensive_handling",
+            "type": "Function",
+            "lineno": 93
+          },
+          {
+            "nodeid": "test_concurrency.py::test_concurrent_creation_isolated_indexing",
+            "type": "Function",
+            "lineno": 111
+          }
+        ]
+      },
+      {
+        "nodeid": ".",
+        "outcome": "passed",
+        "result": [
+          {
+            "nodeid": "instance",
+            "type": "Dir"
+          },
+          {
+            "nodeid": "test_concurrency.py",
+            "type": "Module"
+          }
+        ]
+      }
+    ],
+    "tests": [
+      {
+        "nodeid": "test_concurrency.py::test_concurrent_updates",
+        "lineno": 51,
+        "outcome": "passed",
+        "keywords": [
+          "test_concurrent_updates",
+          "test_concurrency.py",
+          "v-coralhuang_25_11_07_case1",
+          ""
+        ],
+        "setup": {
+          "duration": 0.035835099988617,
+          "outcome": "passed"
+        },
+        "call": {
+          "duration": 0.12300139997387305,
+          "outcome": "passed"
+        },
+        "teardown": {
+          "duration": 0.00023200002033263445,
+          "outcome": "passed"
+        }
+      },
+      {
+        "nodeid": "test_concurrency.py::test_rollback_and_cleanup",
+        "lineno": 70,
+        "outcome": "passed",
+        "keywords": [
+          "test_rollback_and_cleanup",
+          "test_concurrency.py",
+          "v-coralhuang_25_11_07_case1",
+          ""
+        ],
+        "setup": {
+          "duration": 0.00021239998750388622,
+          "outcome": "passed"
+        },
+        "call": {
+          "duration": 0.011261300009209663,
+          "outcome": "passed"
+        },
+        "teardown": {
+          "duration": 0.00019979994976893067,
+          "outcome": "passed"
+        }
+      },
+      {
+        "nodeid": "test_concurrency.py::test_leftover_changes_cleared_and_defensive_handling",
+        "lineno": 93,
+        "outcome": "passed",
+        "keywords": [
+          "test_leftover_changes_cleared_and_defensive_handling",
+          "test_concurrency.py",
+          "v-coralhuang_25_11_07_case1",
+          ""
+        ],
+        "setup": {
+          "duration": 0.00020070001482963562,
+          "outcome": "passed"
+        },
+        "call": {
+          "duration": 0.010339599975850433,
+          "outcome": "passed"
+        },
+        "teardown": {
+          "duration": 0.0004206000012345612,
+          "outcome": "passed"
+        }
+      },
+      {
+        "nodeid": "test_concurrency.py::test_concurrent_creation_isolated_indexing",
+        "lineno": 111,
+        "outcome": "passed",
+        "keywords": [
+          "test_concurrent_creation_isolated_indexing",
+          "test_concurrency.py",
+          "v-coralhuang_25_11_07_case1",
+          ""
+        ],
+        "setup": {
+          "duration": 0.0001694000093266368,
+          "outcome": "passed"
+        },
+        "call": {
+          "duration": 0.0704927000333555,
+          "outcome": "passed"
+        },
+        "teardown": {
+          "duration": 0.00841840001521632,
+          "outcome": "passed"
+        }
+      }
+    ],
+    "warnings": [
+      {
+        "message": "The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)",
+        "category": "LegacyAPIWarning",
+        "when": "runtest",
+        "filename": "C:\\Bug_Bash\\25_11_07\\v-coralhuang_25_11_07_case1\\test_concurrency.py",
+        "lineno": 44
+      },
+      {
+        "message": "The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)",
+        "category": "LegacyAPIWarning",
+        "when": "runtest",
+        "filename": "C:\\Bug_Bash\\25_11_07\\v-coralhuang_25_11_07_case1\\test_concurrency.py",
+        "lineno": 44
+      },
+      {
+        "message": "The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)",
+        "category": "LegacyAPIWarning",
+        "when": "runtest",
+        "filename": "C:\\Bug_Bash\\25_11_07\\v-coralhuang_25_11_07_case1\\test_concurrency.py",
+        "lineno": 78
+      },
+      {
+        "message": "The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)",
+        "category": "LegacyAPIWarning",
+        "when": "runtest",
+        "filename": "C:\\Bug_Bash\\25_11_07\\v-coralhuang_25_11_07_case1\\test_concurrency.py",
+        "lineno": 103
+      }
+    ]
+  }
+}
