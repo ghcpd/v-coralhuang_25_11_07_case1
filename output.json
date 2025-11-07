@@ -1,131 +1,45 @@
-﻿{
-    "summary":  {
-                    "failed":  null,
-                    "total":  3,
-                    "passed":  3
-                },
-    "raw":  {
-                "created":  1762485558.3068569,
-                "duration":  0.6437594890594482,
-                "exitcode":  0,
-                "root":  "C:\\Bug_Bash\\25_11_07\\v-coralhuang_25_11_07_case1",
-                "environment":  {
-
-                                },
-                "summary":  {
-                                "passed":  3,
-                                "total":  3,
-                                "collected":  3
-                            },
-                "collectors":  [
-                                   {
-                                       "nodeid":  "",
-                                       "outcome":  "passed",
-                                       "result":  [
-                                                      {
-                                                          "nodeid":  "test_concurrency.py",
-                                                          "type":  "Module"
-                                                      }
-                                                  ]
-                                   },
-                                   {
-                                       "nodeid":  "test_concurrency.py",
-                                       "outcome":  "passed",
-                                       "result":  [
-                                                      {
-                                                          "nodeid":  "test_concurrency.py::test_concurrent_updates",
-                                                          "type":  "Function",
-                                                          "lineno":  50
-                                                      },
-                                                      {
-                                                          "nodeid":  "test_concurrency.py::test_missing_and_leftover_changes",
-                                                          "type":  "Function",
-                                                          "lineno":  70
-                                                      },
-                                                      {
-                                                          "nodeid":  "test_concurrency.py::test_rollback_and_residual_state",
-                                                          "type":  "Function",
-                                                          "lineno":  95
-                                                      }
-                                                  ]
-                                   }
-                               ],
-                "tests":  [
-                              {
-                                  "nodeid":  "test_concurrency.py::test_concurrent_updates",
-                                  "lineno":  50,
-                                  "outcome":  "passed",
-                                  "keywords":  [
-                                                   "test_concurrent_updates",
-                                                   "test_concurrency.py",
-                                                   "v-coralhuang_25_11_07_case1"
-                                               ],
-                                  "setup":  {
-                                                "duration":  0.00022649997845292091,
-                                                "outcome":  "passed"
-                                            },
-                                  "call":  {
-                                               "duration":  0.1620219000033103,
-                                               "outcome":  "passed"
-                                           },
-                                  "teardown":  {
-                                                   "duration":  0.0002884000423364341,
-                                                   "outcome":  "passed"
-                                               }
-                              },
-                              {
-                                  "nodeid":  "test_concurrency.py::test_missing_and_leftover_changes",
-                                  "lineno":  70,
-                                  "outcome":  "passed",
-                                  "keywords":  [
-                                                   "test_missing_and_leftover_changes",
-                                                   "test_concurrency.py",
-                                                   "v-coralhuang_25_11_07_case1"
-                                               ],
-                                  "setup":  {
-                                                "duration":  0.00028450001263991,
-                                                "outcome":  "passed"
-                                            },
-                                  "call":  {
-                                               "duration":  0.021113299997523427,
-                                               "outcome":  "passed"
-                                           },
-                                  "teardown":  {
-                                                   "duration":  0.00021590001415461302,
-                                                   "outcome":  "passed"
-                                               }
-                              },
-                              {
-                                  "nodeid":  "test_concurrency.py::test_rollback_and_residual_state",
-                                  "lineno":  95,
-                                  "outcome":  "passed",
-                                  "keywords":  [
-                                                   "test_rollback_and_residual_state",
-                                                   "test_concurrency.py",
-                                                   "v-coralhuang_25_11_07_case1"
-                                               ],
-                                  "setup":  {
-                                                "duration":  0.00014750001719221473,
-                                                "outcome":  "passed"
-                                            },
-                                  "call":  {
-                                               "duration":  0.0106736000161618,
-                                               "outcome":  "passed"
-                                           },
-                                  "teardown":  {
-                                                   "duration":  0.0007684000302106142,
-                                                   "outcome":  "passed"
-                                               }
-                              }
-                          ],
-                "warnings":  [
-                                 {
-                                     "message":  "Deprecated API features detected! These feature(s) are not compatible with SQLAlchemy 2.0. To prevent incompatible upgrades prior to updating applications, ensure requirements files are pinned to \"sqlalchemy\u003c2.0\". Set environment variable SQLALCHEMY_WARN_20=1 to show all deprecation warnings.  Set environment variable SQLALCHEMY_SILENCE_UBER_WARNING=1 to silence this message. (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)",
-                                     "category":  "LegacyAPIWarning",
-                                     "when":  "runtest",
-                                     "filename":  "C:\\Bug_Bash\\25_11_07\\v-coralhuang_25_11_07_case1\\test_concurrency.py",
-                                     "lineno":  40
-                                 }
-                             ]
-            }
+{
+	"detected_issues": [
+		"after_commit did not check for the existence or type of session._changes",
+		"_changes was not cleared between transactions, leaving stale data",
+		"_changes was attached directly to global db.session (not session-safe)",
+		"Index updates lacked atomicity leading to race conditions",
+		"Event handlers were bound to a global session instead of Session-level events",
+		"Test suite lacked coverage for malformed/missing _changes and rollback scenarios"
+	],
+	"modifications": [
+		"Use session.info per-class keys for per-transaction change storage",
+		"Add defensive checks and normalization for change data structure",
+		"Clear per-session change buffers after commit and after rollback",
+		"Bind events to sqlalchemy.orm.Session using event.listens_for",
+		"Use a threading.Lock (INDEX_LOCK) to make index updates atomic",
+		"Refactor tests to cover concurrent commits, malformed _changes, rollback, and isolation"
+	],
+	"test_run": {
+		"attempted": true,
+		"status": "failed",
+		"reason": "Test execution in this automated environment failed due to missing imports",
+		"errors": [
+			{
+				"step": "import models (first attempt)",
+				"error": "ModuleNotFoundError: No module named 'flask_sqlalchemy'",
+				"note": "Observed when running test_runner via the environment's Python interpreter."
+			},
+			{
+				"step": "import models (after modifications)",
+				"error": "ModuleNotFoundError: No module named 'sqlalchemy'",
+				"note": "Subsequent attempts also reported missing SQLAlchemy in the interpreter used by the run tool."
+			}
+		],
+		"raw_tool_output": "Multiple ModuleNotFoundError exceptions were raised when attempting to import dependencies (flask_sqlalchemy and sqlalchemy) from the Python interpreter used by the automated runner. See console logs for full tracebacks."
+	},
+	"how_to_run_locally": {
+		"notes": "Run these commands in PowerShell on your machine to reproduce tests locally (creates a venv and runs pytest with JSON report).",
+		"commands": [
+			"python -m venv .venv",
+			".\\.venv\\Scripts\\pip.exe install --upgrade pip",
+			".\\.venv\\Scripts\\pip.exe install -r requirements.txt",
+			".\\.venv\\Scripts\\pytest.exe -q --json-report --json-report-file=raw_results.json"
+		]
+	}
 }

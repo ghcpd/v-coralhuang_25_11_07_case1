@@ -1,28 +1,22 @@
 #!/usr/bin/env bash
 set -euo pipefail
-
-# Create venv
 python -m venv .venv
-. .venv/bin/activate
-
-# Install dependencies
-pip install --upgrade pip
-pip install -r requirements.txt
-
-# Run pytest and capture raw results
-pytest -q --tb=short --json-report --json-report-file=raw_results.json
-
-# Summarize results to output.json
+.venv/Scripts/pip.exe install --upgrade pip
+.venv/Scripts/pip.exe install -r requirements.txt
+.venv/Scripts/pytest.exe -q --json-report --json-report-file=raw_results.json
 python - <<'PY'
-import json
-with open('raw_results.json') as f:
-    r = json.load(f)
+import json,sys
+try:
+    r = json.load(open('raw_results.json'))
+except Exception as e:
+    print('Failed to read raw_results.json:', e)
+    sys.exit(2)
 summary = {
-    'total': r.get('summary', {}).get('total', 0),
-    'passed': r.get('summary', {}).get('passed', 0),
-    'failed': r.get('summary', {}).get('failed', 0),
+    'passed': r.get('summary',{}).get('passed',0),
+    'failed': r.get('summary',{}).get('failed',0),
+    'errors': r.get('summary',{}).get('errors',0),
+    'duration': r.get('duration',0.0)
 }
-with open('output.json','w') as o:
-    json.dump({'summary': summary, 'raw': r}, o, indent=2)
+json.dump({'raw': r, 'summary': summary}, open('output.json','w'), indent=2)
 print('Wrote output.json')
 PY
