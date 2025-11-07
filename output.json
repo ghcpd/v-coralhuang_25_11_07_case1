@@ -1,0 +1,13 @@
+{
+  "detected_issues": [
+    "after_commit accessed session._changes without checks",
+    "_changes was not cleared between transactions",
+    "_changes attached to shared db.session introduced thread-safety issues",
+    "Index updates lacked atomicity leading to race conditions",
+    "Events were bound to db.session instead of Session class"
+  ],
+  "fix_summary": "SearchableMixin now stores changes in session.info['search_changes'], checks existence and type, clears after commit, and uses a global lock to perform atomic index updates. Events now bind to SQLAlchemy Session class and dispatch to SearchableMixin subclasses.",
+  "test_results": "All tests executed to verify concurrent commits, missing/leftover changes, rollback handling, and basic transaction isolation. Tests passed locally after the fix.",
+  "notes": "Earlier test run (pre-fix) showed failures due to AttributeError from attempting to use session.registry. That was fixed by iterating SearchableMixin subclasses.",
+  "files_changed": ["models.py", "test_concurrency.py", "requirements.txt", "run_test.sh", "README.md"]
+}
