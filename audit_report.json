@@ -1,0 +1,36 @@
+{
+  "issues_detected": [
+    {
+      "id": 1,
+      "title": "after_commit lacks defensive checks",
+      "root_cause": "session._changes may not exist or be of expected type; accessing it raises exceptions."
+    },
+    {
+      "id": 2,
+      "title": "_changes not cleared between transactions",
+      "root_cause": "_changes persisted on shared session leading to stale data across transactions."
+    },
+    {
+      "id": 3,
+      "title": "Shared mutable state on global db.session",
+      "root_cause": "Code attached _changes directly on db.session, which is shared and not session-thread safe."
+    },
+    {
+      "id": 4,
+      "title": "Index updates not atomic",
+      "root_cause": "INDEX append operations are unprotected and may interleave across threads."
+    },
+    {
+      "id": 5,
+      "title": "Incomplete test coverage",
+      "root_cause": "Tests didn't cover missing/leftover states, rollbacks, or session isolation race scenarios."
+    },
+    {
+      "id": 6,
+      "title": "Global event binding",
+      "root_cause": "Event listeners were attached to a global db.session instead of per-Session listeners leading to unpredictable behavior."
+    }
+  ],
+  "code_changes_summary": "Implemented session.info-based per-session change tracking, added defensive checks, ensured cleanup after commit/rollback, used SQLAlchemy Session event hooks for session-level binding, added atomic indexing via a lock, and extended tests to cover concurrency and cleanup cases.",
+  "tests_results_file": "output.json"
+}
