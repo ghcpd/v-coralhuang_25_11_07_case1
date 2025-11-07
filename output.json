@@ -1,0 +1,62 @@
+{
+  "detected_issues": [
+    {
+      "id": 1,
+      "description": "after_commit did not check for the existence or type of session._changes and could raise on missing attributes.",
+      "root_cause": "session._changes was used without defensive checks; could be missing or wrong type"
+    },
+    {
+      "id": 2,
+      "description": "_changes was not cleared between transactions, leaving stale or residual values.",
+      "root_cause": "global mutable state attached to session persisted across commits"
+    },
+    {
+      "id": 3,
+      "description": "_changes attached to a global db.session which is not session-safe or thread-safe.",
+      "root_cause": "global session attribute mutation rather than session.info or thread-local storage"
+    },
+    {
+      "id": 4,
+      "description": "Index updates lacked atomicity and could be lost or interleaved on concurrent commits.",
+      "root_cause": "no locking or queuing for index calls; simultaneous append to shared list caused race conditions"
+    },
+    {
+      "id": 5,
+      "description": "Test coverage deficiencies allowed regressions: missing tests for leftover/missing changes and rollbacks.",
+      "root_cause": "insufficient test cases for edge conditions"
+    },
+    {
+      "id": 6,
+      "description": "Event registration used db.session rather than Session-level binding, potentially missing event triggering for different session types.",
+      "root_cause": "wrong choice of SQLAlchemy event target"
+    }
+  ],
+  "modifications": [
+    {
+      "file": "models.py",
+      "edits": [
+        "Use session.info['search_changes'] instead of attaching _changes to global session",
+        "Add defensive checks and reinitialization in _init_changes to clear stale data",
+        "Add thread lock _INDEX_LOCK and atomic_add_to_index to ensure index write atomicity",
+        "Use event.listens_for(Session, ...) for before_commit, after_commit, and after_rollback"
+      ]
+    },
+    {
+      "file": "test_concurrency.py",
+      "edits": [
+        "Added Flask app fixture and database setup/teardown",
+        "Added tests for missing/leftover changes and rollback behavior",
+        "Test concurrent updates and transaction isolation using multiple threads",
+        "Ensured reproducible SQLite config and check_same_thread=False"
+      ]
+    }
+  ],
+  "test_results": {
+    "raw": "raw_results.json",
+    "summary": {
+      "passed": 4,
+      "failed": 0,
+      "duration_seconds": 0.8044519424438477
+    }
+  }
+}
