@@ -1,0 +1,67 @@
+You are a backend reliability engineer responsible for auditing, fixing, and validating concurrency, safety, and event-binding issues in a Python Flask application that integrates SQLAlchemy ORM with a search index via a SearchableMixin class.
+Your task is not only to generate corrected code but also to execute and verify it through a fully reproducible local test environment.
+
+1. Background and Existing Issues
+
+The current implementation contains multiple reliability and concurrency defects that must be corrected.
+Identified problems:
+after_commit does not check for the existence or type of session._changes.
+_changes is not cleared between transactions, leaving residual or stale data.
+_changes is attached directly to the global shared db.session, which is not thread-safe or session-safe.
+The index update process lacks transaction-level atomicity, causing possible race conditions or out-of-order updates.
+The test suite does not simulate scenarios with missing or leftover _changes, leading to incomplete coverage.
+The implementation does not use SQLAlchemy’s recommended event binding mechanism for consistent behavior across sessions.
+
+2. Technical Requirements for the Fixed Implementation
+The corrected SearchableMixin must:
+Defensively check that _changes exists and is of the correct type before access, preventing AttributeError or TypeError.
+Reinitialize or clear _changes at the start of each transaction to ensure proper isolation.
+Use thread-safe or session-safe storage (e.g., session.info or thread-local) instead of shared attributes on db.session.
+Make index updates atomic, using either a lock or a simulated async queue to preserve correct ordering.
+Adopt SQLAlchemy’s standard event registration pattern, such as event.listens_for(Session, ...).
+Provide full test coverage for edge cases including missing/leftover _changes, concurrent commits, exception handling, and transaction isolation.
+
+3. Development Tasks
+
+Perform the following:
+Fix the implementation in models.py to address all six defects.
+Refactor event registration to Session-level binding (event.listens_for(Session, ...)).
+Ensure concurrency safety via session.info or a thread-local store.
+Implement atomic index updates (lock or simulated queue).
+Extend the test suite (test_concurrency.py) to cover:
+concurrent commits
+missing/leftover _changes
+rollback and residual-state scenarios
+simulated concurrent transaction isolation
+Include reproducibility assets:
+requirements.txt — all dependencies (Flask, SQLAlchemy, etc.)
+SQLite-based local testing setup
+Mock search index to emulate Elasticsearch updates
+
+4. Verification and Deliverables
+The deliverables must form a self-contained, reproducible environment capable of running offline with SQLite and mock components.
+Required outputs:
+models.py — corrected implementation
+test_concurrency.py — comprehensive test suite
+requirements.txt — dependencies for isolated testing
+run_test.sh — one-click script that:
+sets up a virtual environment
+installs dependencies
+runs all tests using pytest
+captures results in raw_results.json
+generates a summarized output.json
+README.md — detailed documentation explaining:
+the nature of the original defects
+technical details of the fixes
+how to reproduce and run the tests
+output.json — structured audit report containing:
+list of detected issues and root causes
+summary of code modifications
+actual test results from execution, including pass/fail counts and timing statistics
+
+5. Execution Requirements
+
+You must actually execute the test suite in this environment to produce genuine test output.
+Do not fabricate or assume test results — run the tests and capture their real output.
+If a test fails, include the failure details and traceback in output.json.
+If any step cannot be executed, explicitly report the reason instead of simulating success.
