@@ -1,0 +1,124 @@
+{
+  "timestamp": "2025-11-07T12:15:21.257178",
+  "project": "flask_searchablemixin_buggy_version",
+  "test_suite": "test_concurrency.py",
+  "summary": {
+    "passed": 15,
+    "failed": 0,
+    "errors": 0,
+    "total": 15,
+    "exit_code": 0,
+    "success": true
+  },
+  "issues_identified_in_original": [
+    {
+      "issue_id": 1,
+      "title": "Missing defensive checks for _changes",
+      "description": "after_commit() does not check for existence or type of session._changes, leading to AttributeError or TypeError",
+      "risk": "CRITICAL",
+      "status": "FIXED"
+    },
+    {
+      "issue_id": 2,
+      "title": "_changes not cleared between transactions",
+      "description": "Residual _changes from previous transactions can leak into subsequent transactions",
+      "risk": "HIGH",
+      "status": "FIXED"
+    },
+    {
+      "issue_id": 3,
+      "title": "Shared mutable state on global session",
+      "description": "Attaching _changes directly to db.session is not thread-safe and violates session isolation",
+      "risk": "CRITICAL",
+      "status": "FIXED"
+    },
+    {
+      "issue_id": 4,
+      "title": "Non-atomic index updates under concurrency",
+      "description": "Multiple threads can interleave index updates, causing race conditions and data loss",
+      "risk": "CRITICAL",
+      "status": "FIXED"
+    },
+    {
+      "issue_id": 5,
+      "title": "Incomplete test coverage",
+      "description": "Original tests do not cover missing _changes, rollback, or proper isolation scenarios",
+      "risk": "MEDIUM",
+      "status": "FIXED"
+    },
+    {
+      "issue_id": 6,
+      "title": "Improper event binding mechanism",
+      "description": "Uses db.event.listen(db.session) binding to global instance instead of Session class",
+      "risk": "MEDIUM",
+      "status": "FIXED"
+    }
+  ],
+  "fixes_implemented": {
+    "models.py": {
+      "threading_lock": {
+        "description": "Added threading.RLock for atomic index updates",
+        "impact": "Prevents race conditions in concurrent index operations (fixes Issue 4)",
+        "code_change": "INDEX_LOCK = threading.RLock()"
+      },
+      "session_info_storage": {
+        "description": "Replaced session._changes with session.info[\"searchable_changes\"]",
+        "impact": "session.info is transaction-scoped and thread-safe (fixes Issues 2 & 3)",
+        "code_change": "session.info[\"searchable_changes\"] instead of session._changes"
+      },
+      "defensive_checks": {
+        "description": "Added existence and type checks in after_commit()",
+        "impact": "Prevents AttributeError/TypeError from missing or invalid state (fixes Issue 1)",
+        "code_change": "if \"searchable_changes\" not in session.info: return"
+      },
+      "state_cleanup": {
+        "description": "Clear searchable_changes after commit and on rollback",
+        "impact": "Prevents stale data accumulation (fixes Issue 2)",
+        "code_change": "session.info[\"searchable_changes\"] = {} after operations"
+      },
+      "rollback_handler": {
+        "description": "Added after_rollback event handler",
+        "impact": "Ensures clean state after rollback (fixes Issue 2)",
+        "code_change": "event.listens_for(Session, \"after_rollback\")"
+      },
+      "session_binding": {
+        "description": "Changed to Session-level event binding",
+        "impact": "Uses recommended SQLAlchemy pattern, better isolation (fixes Issue 6)",
+        "code_change": "event.listens_for(Session, \"before_commit\")"
+      }
+    },
+    "test_concurrency.py": {
+      "test_coverage": {
+        "basic_functionality": "TestBasicFunctionality class - CRUD operations",
+        "concurrency": "TestConcurrencyAndThreadSafety - Concurrent updates, creates",
+        "defensive_checks": "TestDefensiveChecks - Missing changes, type errors, isolation",
+        "rollback": "TestRollbackHandling - Rollback cleanup, state isolation",
+        "atomicity": "TestAtomicIndexUpdates - Lock-based atomic operations",
+        "session_isolation": "TestSessionIsolation - session.info isolation",
+        "edge_cases": "TestEdgeCases - Empty transactions, mixed operations"
+      },
+      "total_test_methods": 15,
+      "test_classes": 7,
+      "key_scenarios": [
+        "Concurrent thread updates all preserved",
+        "Concurrent creates without loss",
+        "Missing changes handled gracefully",
+        "Invalid changes type checked safely",
+        "Transaction isolation enforced",
+        "Rollback clears residual state",
+        "Index lock prevents corruption",
+        "Empty transactions safe",
+        "Mixed operations in single transaction"
+      ]
+    }
+  },
+  "test_results": {
+    "passed": 15,
+    "failed": 0,
+    "errors": 0,
+    "total": 15,
+    "test_classes_executed": 7,
+    "all_tests_passed": true
+  },
+  "test_output_summary": "AndThreadSafety::test_concurrent_updates_preserve_all_changes PASSED [ 26%]\ntest_concurrency.py::TestConcurrencyAndThreadSafety::test_concurrent_creates_all_indexed PASSED [ 33%]\ntest_concurrency.py::TestDefensiveChecks::test_after_commit_with_missing_changes PASSED [ 40%]\ntest_concurrency.py::TestDefensiveChecks::test_after_commit_with_invalid_changes_type PASSED [ 46%]\ntest_concurrency.py::TestDefensiveChecks::test_multiple_transactions_isolation PASSED [ 53%]\ntest_concurrency.py::TestRollbackHandling::test_rollback_clears_residual_state PASSED [ 60%]\ntest_concurrency.py::TestRollbackHandling::test_rollback_no_index_updates PASSED [ 66%]\ntest_concurrency.py::TestAtomicIndexUpdates::test_index_lock_prevents_corruption PASSED [ 73%]\ntest_concurrency.py::TestSessionIsolation::test_session_info_isolation PASSED [ 80%]\ntest_concurrency.py::TestEdgeCases::test_empty_transaction_no_index_update PASSED [ 86%]\ntest_concurrency.py::TestEdgeCases::test_multiple_objects_same_transaction PASSED [ 93%]\ntest_concurrency.py::TestEdgeCases::test_mixed_operations_same_transaction PASSED [100%]\n\n============================== warnings summary ===============================\ntest_concurrency.py::TestConcurrencyAndThreadSafety::test_concurrent_updates_preserve_all_changes\ntest_concurrency.py::TestConcurrencyAndThreadSafety::test_concurrent_updates_preserve_all_changes\ntest_concurrency.py::TestConcurrencyAndThreadSafety::test_concurrent_updates_preserve_all_changes\n  C:\\Bug_Bash\\25_11_07\\v-coralhuang_25_11_07_case1\\test_concurrency.py:90: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)\n    post = Post.query.get(post_id)\n\n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\n======================= 15 passed, 3 warnings in 0.15s ========================\n"
+}
